@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora ELO Mejorada</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        div {
+            margin-bottom: 20px;
+        }
+        input, select, button {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        #jugadoresList li, #jugadoresPartidaContainer div {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Calculadora de ELO para 2, 3 o 4 jugadores</h1>
+    
+    <div id="agregarJugador">
+        <h2>Agregar Nuevo Jugador</h2>
+        <input type="text" id="nombreJugador" placeholder="Nombre del Jugador">
+        <input type="number" id="eloInicial" placeholder="ELO Inicial">
+        <button onclick="agregarJugador()">Agregar Jugador</button>
+    </div>
+    
+    <div id="listaJugadores">
+        <h2>Lista de Jugadores</h2>
+        <ul id="jugadoresList"></ul>
+    </div>
+    
+    <div id="calculadora">
+        <h2>Seleccionar Jugadores para la Partida</h2>
+        <select id="numJugadores" onchange="actualizarSeleccionJugadores()">
+            <option value="2">2 Jugadores</option>
+            <option value="3">3 Jugadores</option>
+            <option value="4">4 Jugadores</option>
+        </select>
+        <div id="jugadoresPartidaContainer"></div>
+        <button onclick="calcularELO()">Actualizar ELO</button>
+    </div>
+
+    <script>
+        let jugadores = [];
+
+        function agregarJugador() {
+            const nombre = document.getElementById('nombreJugador').value;
+            const eloInicial = parseInt(document.getElementById('eloInicial').value);
+            if (nombre && eloInicial) {
+                jugadores.push({ nombre: nombre, elo: eloInicial });
+                actualizarListaJugadores();
+                document.getElementById('nombreJugador').value = '';
+                document.getElementById('eloInicial').value = '';
+            } else {
+                alert("Por favor, completa todos los campos.");
+            }
+        }
+
+        function actualizarListaJugadores() {
+            const listaJugadores = document.getElementById('jugadoresList');
+            listaJugadores.innerHTML = '';
+            jugadores.forEach((jugador, index) => {
+                listaJugadores.innerHTML += `<li>${jugador.nombre}: ELO = ${jugador.elo.toFixed(2)}</li>`;
+            });
+            actualizarSeleccionJugadores();
+        }
+
+        function actualizarSeleccionJugadores() {
+            const numJugadores = parseInt(document.getElementById('numJugadores').value);
+            const container = document.getElementById('jugadoresPartidaContainer');
+            container.innerHTML = '';
+            for (let i = 1; i <= numJugadores; i++) {
+                let opciones = jugadores.map((jugador, index) => 
+                    `<option value="${index}">${jugador.nombre}</option>`
+                ).join('');
+                container.innerHTML += `
+                    <div>
+                        <select id="jugador${i}">
+                            <option value="">Selecciona un jugador</option>
+                            ${opciones}
+                        </select>
+                        <input type="number" id="posicion${i}" placeholder="Posición" min="1" max="${numJugadores}">
+                    </div>
+                `;
+            }
+        }
+
+        function calcularELO() {
+            const numJugadores = parseInt(document.getElementById('numJugadores').value);
+            let partidaJugadores = [];
+            for (let i = 1; i <= numJugadores; i++) {
+                const jugadorSelect = document.getElementById(`jugador${i}`);
+                const posicionInput = document.getElementById(`posicion${i}`);
+                if (jugadorSelect.value && posicionInput.value) {
+                    partidaJugadores.push({
+                        index: parseInt(jugadorSelect.value),
+                        posicion: parseInt(posicionInput.value)
+                    });
+                }
+            }
+            
+            if (partidaJugadores.length !== numJugadores) {
+                alert("Por favor, selecciona todos los jugadores y asigna sus posiciones.");
+                return;
+            }
+
+            // Ordenar jugadores por posición
+            partidaJugadores.sort((a, b) => a.posicion - b.posicion);
+
+            // Calcular nuevos ELOs
+            const K = 32; // Factor K, ajusta según sea necesario
+            for (let i = 0; i < partidaJugadores.length; i++) {
+                for (let j = i + 1; j < partidaJugadores.length; j++) {
+                    const jugador1 = jugadores[partidaJugadores[i].index];
+                    const jugador2 = jugadores[partidaJugadores[j].index];
+                    const expectativa1 = 1 / (1 + Math.pow(10, (jugador2.elo - jugador1.elo) / 400));
+                    const resultado = 1; // Jugador1 gana a Jugador2
+                    const cambioELO = K * (resultado - expectativa1);
+                    jugador1.elo += cambioELO;
+                    jugador2.elo -= cambioELO;
+                }
+            }
+
+            actualizarListaJugadores();
+        }
+
+        // Inicialización
+        actualizarListaJugadores();
+    </script>
+</body>
+</html>
